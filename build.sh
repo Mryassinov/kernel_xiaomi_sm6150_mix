@@ -32,8 +32,12 @@ export GCC64_PATH=$(pwd)/gcc64
 export GCC32_PATH=$(pwd)/gcc32
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 
+# Clone KernelSU Driver
+echo "📥 Cloning KernelSU Drivers..."
+curl -LSs "https://raw.githubusercontent.com/Mr-Morat/KernelSU-Next/stable/kernel/setup.sh" | bash -s legacy_susfs
+
 # Build Kernel
-echo "🛠️ Build Kernel"
+echo "🛠️ Building kernel..."
 export ARCH=arm64
 export PATH="$CLANG_PATH/bin:$GCC64_PATH/bin:$GCC32_PATH/bin:$PATH"
 export KBUILD_BUILD_USER=Brutalist
