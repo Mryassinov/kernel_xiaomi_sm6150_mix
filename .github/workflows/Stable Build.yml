@@ -11,12 +11,14 @@ jobs:
       uses: actions/checkout@v4
       
     - name: ⏰ Prepare timezone
-      run: sudo timedatectl set-timezone Africa/Casablanca
+      run: |
+        sudo rm /etc/localtime
+        sudo ln -s /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
         
     - name: 📦 Install Dependencies
       run: |
         sudo apt update -y
-        sudo apt install bc cpio flex bison git python-is-python3 tar aria2 perl wget curl lz4 libssl-dev -y
+        sudo apt install bc cpio flex bison aptitude git python-is-python3 tar aria2 perl wget curl lz4 libssl-dev -y
         
     - name: 🔧 Clone Toolchains
       run: |
@@ -26,30 +28,30 @@ jobs:
         
     - name: ⚙️ Setup Environment
       run: |
-        echo "BUILD_TIME=$(TZ=Africa/Casablanca date '+%d%m%Y-%H%M')" >> $GITHUB_ENV
+        echo "BUILD_TIME=$(TZ=Asia/Jakarta date '+%d%m%Y-%H%M')" >> $GITHUB_ENV
         echo "CLANG_PATH=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
         echo "GCC64_PATH=$GITHUB_WORKSPACE/gcc64" >> $GITHUB_ENV
         echo "GCC32_PATH=$GITHUB_WORKSPACE/gcc32" >> $GITHUB_ENV
         
-    - name: 📥 Clone KernelSU-Next
+    - name: 📥 Clone kernelSU-Next
       run: curl -LSs "https://raw.githubusercontent.com/Mr-Morat/KernelSU-Next/stable/kernel/setup.sh" | bash -s legacy_susfs
       
     - name: 📅 Set BUILD DATE
-      run: echo "BUILD_DATE=$(TZ=Africa/Casablanca date '+%b %d %Y')" >> $GITHUB_ENV
+      run: |
+        echo "BUILD_DATE='\"$(TZ=Asia/Jakarta date '+%b %d %Y')\"'" >> $GITHUB_ENV
       
     - name: 🛠️ Build Kernel
       run: |
-        set -euo pipefail
         export ARCH=arm64
         export PATH="$CLANG_PATH/bin:$GCC64_PATH/bin:$GCC32_PATH/bin:$PATH"
-        export KBUILD_BUILD_USER=Mryassinov
-        export KBUILD_BUILD_HOST=MryassinovRealm
-        export KBUILD_COMPILER_STRING="$(clang/bin/clang --version | head -n1)"
-        export KCPPFLAGS="-DBUILD_DATE=\"$BUILD_DATE\""
+        export KBUILD_BUILD_USER=Brutalist
+        export KBUILD_BUILD_HOST=MoratRealm
+        export KBUILD_COMPILER_STRING="$CLANG_PATH/clang"
+        export BUILD_DATE=$BUILD_DATE
+        export CFLAGS_EXTRA="-DBUILD_DATE=$BUILD_DATE"
         make O=out ARCH=arm64 sweet_defconfig
-        make -j$(nproc --all) O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 \
-          CC=clang \
-          CLANG_TRIPLE=aarch64-linux-gnu- \
+        make -j$(nproc --all) O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang \
+          CLANG_TRIPLE=$CLANG_PATH/aarch64-linux-gnu- \
           CROSS_COMPILE=$GCC64_PATH/bin/aarch64-elf- \
           CROSS_COMPILE_ARM32=$GCC32_PATH/bin/arm-eabi-
         mv out/.config out/sweet_defconfig.txt
@@ -60,17 +62,17 @@ jobs:
         name: configs-${{ env.BUILD_TIME }}
         path: out/sweet_defconfig.txt
         
-    - name: 📂 Clone AnyKernel3 & Zip
+    - name: 📂 Clone Anykernel3 & Zip
       run: |
-        git clone --depth=1 https://github.com/Mryassinov/AnyKernel3-Splidder AnyKernel3
+        git clone --depth=1 https://github.com/Mr-Morat/anykernel3 -b BruthXotic AnyKernel3
         cp out/arch/arm64/boot/Image.gz AnyKernel3/Image.gz
         cp out/arch/arm64/boot/dtbo.img AnyKernel3/dtbo.img
-        [ -f out/arch/arm64/boot/dtb.img ] && cp out/arch/arm64/boot/dtb.img AnyKernel3/dtb.img || true
+        cp out/arch/arm64/boot/dtb.img AnyKernel3/dtb.img
         cd AnyKernel3
-        zip -r "../Mryassinov-${{ github.ref_name }}-${{ env.BUILD_TIME }}.zip" *
+        zip -r "../BruthXotic-${{ github.ref_name }}-${{ env.BUILD_TIME }}.zip" *
         
     - name: 📤 Upload Flashable zip
       uses: actions/upload-artifact@v4
       with:
-        name: Mryassinov-${{ github.ref_name }}-${{ env.BUILD_TIME }}
-        path: Mryassinov-${{ github.ref_name }}-${{ env.BUILD_TIME }}.zip
+        name: BruthXotic-${{ github.ref_name }}-${{ env.BUILD_TIME }}
+        path: AnyKernel3/*
